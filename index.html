@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Ollama Chat UI</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 700px; margin: 2rem auto; }
+    #response { white-space: pre-wrap; background: #f0f0f0; padding: 1rem; border-radius: 5px; min-height: 150px; }
+    #question { width: 100%; padding: 0.5rem; font-size: 1.1rem; }
+    button { margin-top: 1rem; padding: 0.5rem 1rem; font-size: 1rem; }
+  </style>
+</head>
+<body>
+
+<h1>Ollama Chat UI</h1>
+
+<input id="question" type="text" placeholder="Ask your question here..." />
+<button onclick="sendQuestion()">Send</button>
+
+<h3>Response:</h3>
+<pre id="response"></pre>
+
+<script>
+async function sendQuestion() {
+  const question = document.getElementById('question').value.trim();
+  if (!question) return alert('Please enter a question.');
+
+  const responseElem = document.getElementById('response');
+  responseElem.textContent = 'Waiting for response...\n';
+
+  // Replace this with your actual public FastAPI URL (via LocalTunnel/Ngrok)
+  const baseUrl = 'https://your-public-url.loca.lt';
+
+  // Create a fetch request with streaming
+  const response = await fetch(`${baseUrl}/ask-hints?question=${encodeURIComponent(question)}`);
+
+  if (!response.ok) {
+    responseElem.textContent = `Error: ${response.status} ${response.statusText}`;
+    return;
+  }
+
+  // Read the response stream and update UI live
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder('utf-8');
+  let done = false;
+  let fullText = '';
+
+  while (!done) {
+    const { value, done: doneReading } = await reader.read();
+    done = doneReading;
+    if (value) {
+      const chunk = decoder.decode(value);
+      fullText += chunk;
+      responseElem.textContent = fullText;
+      // Scroll to bottom automatically
+      responseElem.scrollTop = responseElem.scrollHeight;
+    }
+  }
+}
+</script>
+
+</body>
+</html>
